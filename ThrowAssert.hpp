@@ -45,9 +45,11 @@ public:
     /// Helper class for formatting assertion message
     class StreamFormatter
     {
-    public:
+    private:
 
         std::ostringstream stream;
+
+    public:
 
         operator std::string() const
         {
