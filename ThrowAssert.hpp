@@ -28,6 +28,7 @@
 #include <exception>
 #include <string>
 #include <sstream>
+#include <iostream>
 
 /// Exception type for assertion failures
 class AssertionFailureException : public std::exception
@@ -40,6 +41,36 @@ private:
     std::string report;
 
 public:
+
+    /// Helper class for formatting assertion message
+    class StreamFormatter
+    {
+    public:
+
+        std::ostringstream stream;
+
+        operator std::string() const
+        {
+            return stream.str();
+        }
+
+        template<typename T>
+        StreamFormatter& operator << (const T& value)
+        {
+            stream << value;
+            return *this;
+        }
+    };
+
+    /// Log error before throwing
+    void LogError()
+    {
+#ifdef THROWASSERT_LOGGER
+        THROWASSERT_LOGGER(report);
+#else
+        std::cerr << report << std::endl;
+#endif
+    }
 
     /// Construct an assertion failure exception
     AssertionFailureException(const char* expression, const char* file, int line, const std::string& message)
@@ -66,8 +97,10 @@ public:
             outputStream << "Assertion '" << expression << "'";
         }
 
-        outputStream<< " failed in file '" << file << "' line " << line;
+        outputStream << " failed in file '" << file << "' line " << line;
         report = outputStream.str();
+
+        LogError();
     }
 
     /// The assertion message
@@ -105,7 +138,8 @@ public:
     }
 };
 
+
 /// Assert that EXPRESSION evaluates to true, otherwise raise AssertionFailureException with associated MESSAGE (which may use C++ stream-style message formatting)
-#define throw_assert(EXPRESSION, MESSAGE) if(EXPRESSION) {} else throw AssertionFailureException(#EXPRESSION, __FILE__, __LINE__, static_cast<std::ostringstream&>(std::ostringstream() << MESSAGE).str())
+#define throw_assert(EXPRESSION, MESSAGE) if(!(EXPRESSION)) { throw AssertionFailureException(#EXPRESSION, __FILE__, __LINE__, (AssertionFailureException::StreamFormatter() << MESSAGE)); }
 
 #endif // !defined(INCLUDED__THROW_ASSERT_HPP)
